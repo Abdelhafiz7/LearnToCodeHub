@@ -1,5 +1,6 @@
 using API.Entities;
 using API.Enums;
+using API.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Data;
@@ -22,19 +23,30 @@ public class DbInitializer
 
         if (context.Courses.Any()) return;
 
-        // Create Instructor
+        var passwordService = new PasswordService();
+
         var instructor = new User
         {
-            FirstName = "Test",
+            FirstName = "Test1",
             LastName = "Instructor",
-            Email = "instructor@test.com",
-            PasswordHash = "test", // temp
+            Email = "instructor11@test.com",
+            PasswordHash = passwordService.HashPassword("test"),
             Role = UserRole.Instructor
         };
 
         context.Users.Add(instructor);
 
-        // Create Category
+        var admin = new User
+        {
+            FirstName = "Abdelhafiz",
+            LastName = "Saleh",
+            Email = "3bdul7afiz@gmail.com",
+            PasswordHash = passwordService.HashPassword("admin123"),
+            Role = UserRole.Admin
+        };
+
+        context.Users.Add(admin);
+
         var category = new Category
         {
             Name = "Programming",
@@ -45,7 +57,6 @@ public class DbInitializer
 
         context.SaveChanges();
 
-        // Create Courses
         var courses = new List<Course>
         {
             new()

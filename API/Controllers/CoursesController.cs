@@ -1,15 +1,19 @@
+using System.Security.Claims;
 using API.Data;
 using API.Entities;
+using API.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers
 {
-    [Route("api/[controller]")] // http://localhost:5001/api/courses
+    [Authorize(Roles = "Admin,Instructor")]
+    [Route("api/[controller]")]
     [ApiController]
     public class CoursesController(WebContext context) : ControllerBase
-    {
+    {   
         [HttpGet]
         public async Task <ActionResult<List<Course>>> GetCourses()
         {
@@ -21,6 +25,77 @@ namespace API.Controllers
             var course = await context.Courses.FindAsync(id);
             if (course == null) return NotFound();
             return course;
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin, Instructor")]
+        public async Task<ActionResult<Course>> CreateCourse(CreateCourseDto courseDto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var course = new Course
+            {
+                Title = courseDto.Title,
+                Description = courseDto.Description,
+                Price = courseDto.Price,
+                ThumbnailUrl = courseDto.ThumbnailUrl,
+                Language = courseDto.Language,
+                CategoryId = courseDto.CategoryId,
+                InstructorId = userId
+            };
+
+            context.Courses.Add(course);
+            await context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetCourse), new { id = course.Id }, course);
+        }
+
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin, Instructor")]
+        public async Task<ActionResult<Course>> UpdateCourse(int id, UpdateCourseDto updateCourseDto)
+        {
+            var course = await context.Courses.FindAsync(id);   
+            if (course == null)
+                return NotFound("Course not found");
+            
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var role = User.FindFirst(ClaimTypes.Role)!.Value;
+
+            if (course.InstructorId != userId && role != "Admin")
+                return  StatusCode(403, "You are not allowed to update this course");
+            
+
+            course.Title = updateCourseDto.Title;
+            course.Description = updateCourseDto.Description;
+            course.Price = updateCourseDto.Price;
+            course.ThumbnailUrl = updateCourseDto.ThumbnailUrl;
+            course.Language = updateCourseDto.Language;
+            course.CategoryId = updateCourseDto.CategoryId;
+            course.UpdatedAt = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+
+            return Ok(course);
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin, Instructor")]
+        public async Task<ActionResult> DeleteCourse(int id)
+        {
+            var course = await context.Courses.FindAsync(id);
+            if (course == null) 
+                return NotFound("Course not found");
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var role = User.FindFirst(ClaimTypes.Role)!.Value;
+
+            if (course.InstructorId != userId && role != "Admin")
+                return StatusCode(403, "You are not allowed to delete this course");
+            
+            context.Courses.Remove(course);
+            await context.SaveChangesAsync();
+
+            return Ok("Course deleted successfully");
         }
     }
 }
