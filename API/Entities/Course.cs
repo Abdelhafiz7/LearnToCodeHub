@@ -27,7 +27,7 @@ public class Course
     public int InstructorId { get; set; }
     public User Instructor { get; set; } = null!;
 
-    public DateTime CreateAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt{ get; set; }
 

@@ -429,6 +429,7 @@ test-results/
 .DS_Store
 .AppleDouble
 .LSOverride
+.LearnToCodeHub.db
 
 # Icon must end with two \r
 Icon

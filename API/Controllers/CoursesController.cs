@@ -29,7 +29,7 @@ namespace API.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin, Instructor")]
-        public async Task<ActionResult<Course>> CreateCourse(CreateCourseDto courseDto)
+        public async Task<ActionResult<Course>> CreateCourse(CourseDto courseDto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
@@ -52,7 +52,7 @@ namespace API.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin, Instructor")]
-        public async Task<ActionResult<Course>> UpdateCourse(int id, UpdateCourseDto updateCourseDto)
+        public async Task<ActionResult<Course>> UpdateCourse(int id, CourseDto courseDto)
         {
             var course = await context.Courses.FindAsync(id);   
             if (course == null)
@@ -65,12 +65,12 @@ namespace API.Controllers
                 return  StatusCode(403, "You are not allowed to update this course");
             
 
-            course.Title = updateCourseDto.Title;
-            course.Description = updateCourseDto.Description;
-            course.Price = updateCourseDto.Price;
-            course.ThumbnailUrl = updateCourseDto.ThumbnailUrl;
-            course.Language = updateCourseDto.Language;
-            course.CategoryId = updateCourseDto.CategoryId;
+            course.Title = courseDto.Title;
+            course.Description = courseDto.Description;
+            course.Price = courseDto.Price;
+            course.ThumbnailUrl = courseDto.ThumbnailUrl;
+            course.Language = courseDto.Language;
+            course.CategoryId = courseDto.CategoryId;
             course.UpdatedAt = DateTime.UtcNow;
 
             await context.SaveChangesAsync();

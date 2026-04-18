@@ -2,7 +2,7 @@ using System;
 
 namespace API.Models;
 
-public class UpdateCourseDto
+public class CourseDto
 {
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
@@ -10,4 +10,5 @@ public class UpdateCourseDto
     public string? ThumbnailUrl { get; set; }
     public string Language { get; set; } = "English";
     public int CategoryId { get; set; }
+    
 }

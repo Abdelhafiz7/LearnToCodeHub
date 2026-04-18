@@ -2,9 +2,9 @@ using System;
 
 namespace API.Enums;
 
-public enum EnrollmentStatus
+public enum CourseLevel
     {
-        Active = 1,
-        Completed = 2,
-        Cancelled = 3
+        Beginner = 1,
+        Intermediate = 2,
+        Advanced = 3
     }
