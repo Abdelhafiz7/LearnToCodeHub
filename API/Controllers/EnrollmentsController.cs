@@ -1,9 +1,9 @@
 using System.Security.Claims;
 using API.Data;
 using API.Entities;
+using API.Enums;
 using API.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +15,7 @@ namespace API.Controllers
     {
         [HttpPost]
         [Authorize(Roles = "Student")]
-        public async Task<ActionResult> Enroll(EnrollmentDto enrollmentDto)
+        public async Task<IActionResult> Enroll(EnrollmentDto enrollmentDto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
@@ -23,17 +23,26 @@ namespace API.Controllers
             if (!courseExists)
                 return NotFound("Course not found");
 
-            var exists = await context.Enrollments
-                .AnyAsync(e => e.UserId == userId && e.CourseId == enrollmentDto.CourseId);
+            var existingEnrollment = await context.Enrollments
+                .FirstOrDefaultAsync(e => e.UserId == userId && e.CourseId == enrollmentDto.CourseId);
 
-            if (exists)
-                return BadRequest("Alrady enrolled in this course");
+            if (existingEnrollment != null)
+            {
+                if (existingEnrollment.Status == EnrollmentStatus.Active)
+                    return BadRequest("Already enrolled");
+
+                existingEnrollment.Status = EnrollmentStatus.Active;
+                existingEnrollment.CompletedAt = null;
+
+                await context.SaveChangesAsync();
+                return Ok("Re-enrolled successfully");
+            }
 
             var enrollment = new Enrollment
             {
                 UserId = userId,
                 CourseId = enrollmentDto.CourseId,
-                Status = Enums.EnrollmentStatus.Active,
+                Status = EnrollmentStatus.Active
             };
 
             context.Enrollments.Add(enrollment);
@@ -49,7 +58,7 @@ namespace API.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
             var enrollments = await context.Enrollments
-                .Where(e => e.UserId == userId)
+                .Where(e => e.UserId == userId && e.Status != EnrollmentStatus.Cancelled)
                 .Include(e => e.Course)
                 .Select(e => new EnrollmentDto
                 {
@@ -58,14 +67,15 @@ namespace API.Controllers
                     Status = e.Status.ToString(),
                     EnrolledAt = e.EnrolledAt,
                     CompletedAt = e.CompletedAt ?? DateTime.MinValue
-                }).ToListAsync();
+                })
+                .ToListAsync();
 
             return Ok(enrollments);
         }
 
-        [HttpPut("complete/{courseId}")]
+        [HttpPut("complete/{CourseId}")]
         [Authorize(Roles = "Student")]
-        public async Task<ActionResult> CompleteCourse(int courseId)
+        public async Task<IActionResult> CompleteCourse(int courseId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
@@ -75,7 +85,7 @@ namespace API.Controllers
             if (enrollment == null)
                 return NotFound("Not enrolled in this course");
 
-            enrollment.Status = Enums.EnrollmentStatus.Completed;
+            enrollment.Status = EnrollmentStatus.Completed;
             enrollment.CompletedAt = DateTime.UtcNow;
 
             await context.SaveChangesAsync();
@@ -85,7 +95,7 @@ namespace API.Controllers
 
         [HttpDelete("{courseId}")]
         [Authorize(Roles = "Student")]
-        public async Task<ActionResult> CancelEnrollment(int courseId)
+        public async Task<IActionResult> CancelEnrollment(int courseId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
@@ -95,11 +105,12 @@ namespace API.Controllers
             if (enrollment == null)
                 return NotFound("Enrollment not found");
 
-            context.Enrollments.Remove(enrollment);
+            enrollment.Status = EnrollmentStatus.Cancelled;
+            enrollment.CompletedAt = null;
+
             await context.SaveChangesAsync();
 
             return Ok("Enrollment cancelled successfully");
         }
-
     }
 }
